@@ -1,4 +1,4 @@
-// Wiring and UI logic (updated to build weapons UI and switch weapon images)
+// Wiring and UI logic (updated to build weapons UI and switch weapon images + intro/query handling)
 (function(){
   const canvas = document.getElementById('game');
   const timerEl = document.getElementById('timer');
@@ -22,6 +22,14 @@
   const SECRET_KEY = 'catch_john_secret_unlocked';
   const WEAPON_KEY = 'catch_john_selected_weapon';
 
+  // Read URL params (optional: ?from=intro, ?weapon=pickaxe.png)
+  const urlParams = new URLSearchParams(window.location.search);
+  const requestedWeapon = urlParams.get('weapon'); // e.g. 'pickaxe.png'
+  const fromQuery = urlParams.get('from'); // 'intro' if coming from story
+
+  // If story.html used localStorage to mark arrival, detect that too
+  const CAME_FROM_INTRO_KEY = 'from_intro';
+
   function isSecretUnlocked(){
     try { return localStorage.getItem(SECRET_KEY) === '1'; } catch(e) { return false; }
   }
@@ -32,16 +40,53 @@
     try { return localStorage.getItem(WEAPON_KEY); } catch(e) { return null; }
   }
 
+  // Preload important images so the first frame doesn't look empty (optional)
+  function preloadImages(list){
+    list.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }
+  preloadImages([
+    'assets/GUN.png',
+    'assets/THEJOHNPORK.png',
+    'assets/llama.png',
+    'assets/pickaxe.png',
+    'assets/pinkgun.png',
+    'assets/valGun.png'
+  ]);
+
   // create game instance
   const game = new Game(canvas, window.LEVELS, { timerEl, levelNameEl, stateEl });
+
+  // If arrived from intro, provide a small UI cue (one-time)
+  (function handleArrivalFromIntro(){
+    let cameFromIntro = false;
+    try {
+      if (fromQuery === 'intro') cameFromIntro = true;
+      if (!cameFromIntro && localStorage.getItem(CAME_FROM_INTRO_KEY) === '1') {
+        cameFromIntro = true;
+        // remove marker so it's one-time
+        localStorage.removeItem(CAME_FROM_INTRO_KEY);
+      }
+    } catch(e){ /* ignore */ }
+
+    if (cameFromIntro) {
+      // Briefly show a message in the state field so user knows they came from the story
+      const prev = stateEl.textContent;
+      stateEl.textContent = 'From story';
+      setTimeout(() => { stateEl.textContent = prev || 'Idle'; }, 1600);
+    }
+  })();
 
   // build weapons UI
   function buildWeaponsUI(){
     weaponsContainer.innerHTML = '';
     const saved = getSavedWeapon();
-    let initial = saved || WEAPONS[0].file;
+    // prefer saved, then requested via URL, then first in list
+    let initial = saved || requestedWeapon || WEAPONS[0].file;
+
     WEAPONS.forEach(w => {
-      // only show files that actually exist in assets? We'll display and rely on network errors if missing.
       const div = document.createElement('div');
       div.className = 'weapon';
       div.title = w.label;
@@ -139,5 +184,12 @@
     const startIdx = (window.LEVELS || []).findIndex(l => !l.secret);
     if (startIdx >= 0) game.startLevel(startIdx);
   });
+
+  // Expose a safe method for story page to mark arrival if story wants to set localStorage rather than query param.
+  // Example in story.html: localStorage.setItem('from_intro','1');
+  window.__catchJohn = window.__catchJohn || {};
+  window.__catchJohn.markArrivedFromIntro = function(){
+    try { localStorage.setItem(CAME_FROM_INTRO_KEY, '1'); } catch(e) {}
+  };
 
 })();

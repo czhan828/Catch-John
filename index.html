@@ -1,87 +1,261 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Catch John — Levels (DM Serif)</title>
+  <title>Catch John — Saga</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <!-- DM Serif Display for all text -->
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet">
   <style>
-    html,body { margin:0; height:100%; background:#111; color:#fff; font-family:'DM Serif Display', serif; }
-    #container { display:flex; align-items:flex-start; gap:16px; padding:12px; box-sizing:border-box; height:100vh; }
-    canvas { background:#222; border:1px solid #333; display:block; width:1200px; height:800px; max-width: calc(100vw - 300px); max-height: calc(100vh - 24px); }
-    #ui { min-width:260px; width:260px; flex:0 0 260px; align-self:flex-start; font-family:'DM Serif Display', serif; }
-    .controls { margin-top:8px; }
-    .level-list { margin:8px 0; padding-left:14px; color:#ddd; }
-    button { margin-top:8px; font-family:'DM Serif Display', serif; }
-    .small { font-size:13px; color:#bbb; }
-
-    /* Weapons UI */
-    #weapons {
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:10px;
+    :root{
+      --bg: #040404;
+      --text-color: #f6f6f6;
+      /* base duration (seconds) used as multiplier per text length; JS will set --duration */
+      --duration: 36s;
     }
-    .weapon {
-      width:56px;
-      height:56px;
-      border:2px solid transparent;
-      background:#111;
+    html,body{ height:100%; margin:0; background:var(--bg); color:var(--text-color); font-family:'DM Serif Display', serif; overflow:hidden; }
+    .stage {
+      position:relative;
+      width:100%;
+      height:100vh;
       display:flex;
       align-items:center;
       justify-content:center;
-      cursor:pointer;
-      box-sizing:border-box;
-      padding:4px;
+      perspective:800px;
+      background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0.0) 100%);
     }
-    .weapon img { max-width:100%; max-height:100%; display:block; pointer-events:none; }
-    .weapon.selected { border-color:#7CFC00; box-shadow:0 0 8px rgba(124,252,0,0.15); }
+    /* top vignette to emphasize emerging from darkness */
+    .vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.9) 100%);
+      mix-blend-mode: multiply;
+    }
 
-    /* small responsive adjustments */
-    @media (max-width:1400px) {
-      canvas { width:1000px; height:650px; }
+    .crawl-wrapper {
+      width: 70%;
+      max-width: 900px;
+      min-width: 260px;
+      height: 70vh;
+      overflow: hidden;
+      position: relative;
+      transform-origin: 50% 100%;
+      transform: rotateX(20deg) translateZ(-100px);
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      margin-bottom: 6vh;
     }
-    @media (max-width:1100px) {
-      #container { flex-direction:column; align-items:center; }
-      #ui { width:100%; min-width:0; text-align:center; }
-      canvas { width: calc(100vw - 24px); height: calc(60vh); max-height: none; }
-      #weapons { justify-content:center; }
+
+    .crawl {
+      width:100%;
+      color: var(--text-color);
+      font-size: clamp(18px, 2.6vw, 28px);
+      line-height: 1.6;
+      text-align: center;
+      white-space: pre-wrap;
+      opacity: 0;
+      transform: translateY(100%);
+      /* animation will move from bottom to top and fade in */
+      animation: crawl var(--duration) linear forwards;
+      /* small smooth fade-in at start */
+      will-change: transform, opacity;
+    }
+
+    @keyframes crawl {
+      0% {
+        transform: translateY(120%);
+        opacity: 0;
+        filter: blur(8px);
+      }
+      10% {
+        opacity: 1;
+        filter: blur(0);
+      }
+      100% {
+        transform: translateY(-120%);
+        opacity: 1;
+        filter: blur(0);
+      }
+    }
+
+    /* start button sits at very bottom, initially hidden */
+    .start-area {
+      position: absolute;
+      bottom: 28px;
+      left: 0;
+      right: 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events: none;
+    }
+
+    .start-btn {
+      pointer-events: auto;
+      background: linear-gradient(90deg, #d19a00, #ffdd57);
+      color:#111;
+      font-family:'DM Serif Display', serif;
+      border:0;
+      padding:12px 22px;
+      font-size:18px;
+      border-radius:6px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      opacity:0;
+      transform: translateY(10px) scale(.98);
+      transition: opacity 420ms ease, transform 420ms ease;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-block;
+    }
+    .start-btn.visible {
+      opacity:1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    /* small skip link top-right */
+    .skip {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-color);
+      padding:8px 12px;
+      border-radius:6px;
+      text-decoration:none;
+      font-size:14px;
+      border: 1px solid rgba(255,255,255,0.04);
+      transition: background 160ms;
+    }
+    .skip:hover { background: rgba(255,255,255,0.10); }
+
+    /* small responsive tweaks */
+    @media (max-width:900px){
+      .crawl-wrapper{ width:86%; height:62vh; }
+      .crawl{ font-size: clamp(16px, 3.6vw, 22px); }
+    }
+
+    @media (max-height:600px){
+      .crawl-wrapper{ height: 56vh; margin-bottom: 4vh; }
     }
   </style>
 </head>
 <body>
-  <div id="container">
-    <canvas id="game" width="1200" height="800"></canvas>
-    <div id="ui">
-      <h2>Catch John — Levels</h2>
-      <div><strong>Timer:</strong> <span id="timer">--:--</span></div>
-      <div><strong>Level:</strong> <span id="levelName">—</span></div>
-      <div><strong>State:</strong> <span id="state">Idle</span></div>
+  <div class="stage" role="region" aria-label="Story intro">
+    <!-- Skip should navigate to the gameplay page (game.html) now -->
+    <a class="skip" id="skipLink" href="story.html">Skip intro</a>
+    <div class="crawl-wrapper" aria-hidden="false">
+      <div id="crawl" class="crawl" role="article" aria-live="polite">
+        <!-- Replace the text below with your John Pork saga. Keep line breaks where desired. -->
+        In the beginning there was hunger — not the need for food, but the craving for adventure.
+        John Pork came from a small tin-roofed town where nights were long and rumors were longer.
+        He learned to trade stories in alleys and to listen in the dim light of taverns,
+        learning every secret the town's cobblestones would spill.
 
-      <div class="controls">
-        <button id="restart">Restart Level</button>
-        <button id="next" style="margin-left:8px">Next Level</button>
+        He took to the road like a shadow following daybreak, with nothing but a battered satchel,
+        a half-broken compass, and a sharp stare that could cut through a lie.
+        Villagers would speak his name softly — sometimes with respect, sometimes in fear,
+        for wherever John Pork wandered, change was never far behind.
+
+        A whisper of rebellion gathered in the north, a crown corrupted, and a hero who refused to bow.
+        Monsters of law and ledger came down from high towers to stake their claims,
+        and John Pork answered, not with steel alone, but with the ridiculous righteousness of one who knows better.
+
+        These are the days that teach you how to fight for the last slice, how to bargain with ghosts,
+        and how to laugh when danger takes its hat off and steps forward politely.
+        This is the saga of John Pork — a fool, a friend, and sometimes a savior.
+        This is only the beginning.
       </div>
-
-      <div class="controls">
-        <p class="small">Choose your weapon:</p>
-        <div id="weapons" aria-label="weapon selector"></div>
-      </div>
-
-      <div class="controls">
-        <p class="small">Available levels:</p>
-        <ul id="levels" class="level-list"></ul>
-      </div>
-
-      <hr />
-      <p class="small">Tip: add or tune levels in js/levels.js. Assets must be in assets/ (GUN.png, THEJOHNPORK.png, llama.png, pickaxe.png, pinkgun.png, valGun.png).</p>
     </div>
+
+    <div class="start-area">
+      <!-- Start navigates to game.html and will set a one-time localStorage flag -->
+      <a id="startBtn" class="start-btn" href="story.html" role="button">Start Game</a>
+    </div>
+
+    <div class="vignette" aria-hidden="true"></div>
   </div>
 
-  <!-- app scripts -->
-  <script src="js/levels.js"></script>
-  <script src="js/game.js"></script>
-  <script src="js/main.js"></script>
+  <script>
+    (function(){
+      const crawlEl = document.getElementById('crawl');
+      const startBtn = document.getElementById('startBtn');
+      const skipLink = document.getElementById('skipLink');
+
+      // compute animation duration based on text height (so longer text scrolls slower)
+      // base: 18 seconds for ~600px of scrollable text, scale up linearly.
+      function setDurationFromContent(){
+        const wrapper = crawlEl.parentElement;
+        const wrapperH = wrapper.clientHeight || (window.innerHeight * 0.7);
+        const clone = crawlEl.cloneNode(true);
+        clone.style.position = 'absolute';
+        clone.style.transform = 'none';
+        clone.style.opacity = '1';
+        clone.style.animation = 'none';
+        clone.style.visibility = 'hidden';
+        document.body.appendChild(clone);
+        const contentH = clone.scrollHeight;
+        document.body.removeChild(clone);
+
+        const travel = wrapperH + contentH;
+        const minDur = 18;
+        const maxDur = 90;
+        let speed = 26;
+        if (contentH > 2200) speed = 20;
+        if (contentH < 600) speed = 36;
+
+        let durationSeconds = Math.round(travel / speed);
+        durationSeconds = Math.max(minDur, Math.min(maxDur, durationSeconds));
+        document.documentElement.style.setProperty('--duration', durationSeconds + 's');
+      }
+
+      function onAnimationEnd(){
+        startBtn.classList.add('visible');
+        startBtn.setAttribute('aria-hidden', 'false');
+      }
+
+      // Clicking Skip should also set the flag so the game knows the player came from the intro
+      skipLink.addEventListener('click', function(){
+        try { localStorage.setItem('from_intro', '1'); } catch(e) {}
+        // allow navigation to proceed
+      });
+
+      // If user clicks anywhere (or presses space/enter) while crawl is playing, skip to end
+      let skipped = false;
+      function skipToEnd(e){
+        if (skipped) return;
+        skipped = true;
+        crawlEl.style.animation = 'none';
+        crawlEl.style.transform = 'translateY(-120%)';
+        onAnimationEnd();
+      }
+      window.addEventListener('click', skipToEnd, { once: true });
+      window.addEventListener('keydown', (ev) => {
+        if (ev.key === ' ' || ev.key === 'Enter' || ev.key === 'Escape') {
+          skipToEnd();
+        }
+      });
+
+      // compute and set duration
+      setDurationFromContent();
+
+      // reveal start button when animation finishes
+      crawlEl.addEventListener('animationend', onAnimationEnd);
+
+      // fallback timer if animationend doesn't fire
+      const computedDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--duration')) || 36;
+      setTimeout(() => {
+        if (!startBtn.classList.contains('visible')) onAnimationEnd();
+      }, (computedDuration * 1000) + 300);
+
+      // Before following the Start Game link, set the one-time localStorage flag
+      startBtn.addEventListener('click', (e) => {
+        try { localStorage.setItem('from_intro', '1'); } catch(err) {}
+        // default anchor navigation continues
+      });
+    })();
+  </script>
 </body>
 </html>
