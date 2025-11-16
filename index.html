@@ -4,43 +4,97 @@
   <meta charset="utf-8" />
   <title>Catch John — Simple Demo</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Load two Google Fonts: Bangers (for YOU WIN) and Merriweather (for YOU LOSE) -->
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Merriweather:wght@700&display=swap" rel="stylesheet">
   <style>
     html,body { margin:0; height:100%; background:#111; color:#fff; font-family:sans-serif; }
-    #container { display:flex; align-items:flex-start; gap:16px; padding:12px; }
-    canvas { background:#222; border:1px solid #333; display:block; }
-    #ui { min-width:220px; }
+    /* Layout: make the game area larger and keep a sidebar UI */
+    #container {
+      display:flex;
+      align-items:flex-start;
+      gap:16px;
+      padding:12px;
+      box-sizing: border-box;
+      height:100vh;
+    }
+    /* Bigger canvas for gameplay */
+    canvas {
+      background:#222;
+      border:1px solid #333;
+      display:block;
+      width:1200px;
+      height:800px;
+      max-width: calc(100vw - 260px); /* responsive: leave space for UI */
+      max-height: calc(100vh - 24px);
+    }
+    #ui {
+      min-width:220px;
+      width:220px;
+      flex: 0 0 220px;
+      align-self:flex-start;
+    }
     button { margin-top:8px; }
+    /* small responsive adjustments */
+    @media (max-width:1400px) {
+      canvas { width:1000px; height:650px; }
+    }
+    @media (max-width:1100px) {
+      #container { flex-direction:column; align-items:center; }
+      #ui { width:100%; min-width:0; text-align:center; }
+      canvas { width: calc(100vw - 24px); height: calc(60vh); max-height: none; }
+    }
   </style>
 </head>
 <body>
   <div id="container">
-    <canvas id="game" width="800" height="600"></canvas>
+    <canvas id="game" width="1200" height="800"></canvas>
     <div id="ui">
       <h2>Catch John — Simple</h2>
-      <div><strong>Timer:</strong> <span id="timer">00:30</span></div>
+      <div><strong>Timer:</strong> <span id="timer">02:00</span></div>
       <div><strong>State:</strong> <span id="state">Playing</span></div>
       <p>Move your mouse to chase John. Click him to catch.</p>
       <button id="restart">Restart</button>
+      <hr />
+      <p style="font-size:12px;color:#bbb">Tips:</p>
+      <ul style="color:#bbb; padding-left:18px; margin-top:6px;">
+        <li>Gun image follows your pointer (canvas cursor hidden).</li>
+        <li>John grows in the final 30% of the timer to make catching easier.</li>
+        <li>To change timer, edit TOTAL_SECONDS at the top of the script.</li>
+      </ul>
     </div>
   </div>
 
   <script>
   // --- Simple Catch John (plain Canvas + JS) ---
   // Config
-  const TOTAL_SECONDS = 30; // change to 120 for 2:00
+  const TOTAL_SECONDS = 120; // 2:00 minutes
   const CANVAS = document.getElementById('game');
   const ctx = CANVAS.getContext('2d');
   const timerEl = document.getElementById('timer');
   const stateEl = document.getElementById('state');
   const restartBtn = document.getElementById('restart');
 
+  // Assets (from assets/ folder)
+  const gunImg = new Image();
+  gunImg.src = 'assets/GUN.png';
+  let gunImgLoaded = false;
+  gunImg.onload = () => { gunImgLoaded = true; };
+
+  const johnImg = new Image();
+  johnImg.src = 'assets/THEJOHNPORK.png';
+  let johnImgLoaded = false;
+  johnImg.onload = () => { johnImgLoaded = true; };
+
   // Game state
-  let john = { x: CANVAS.width/2, y: CANVAS.height/2, r: 28, scale: 1, dead: false };
+  let john = { x: CANVAS.width/2, y: CANVAS.height/2, r: 36, scale: 1, dead: false };
   let mouse = { x: CANVAS.width/2, y: CANVAS.height/2 };
   let startTime = null;
   let timeLeft = TOTAL_SECONDS;
   let running = false;
   let lastFrame = 0;
+
+  // Hide system cursor and use the gun image drawn in-canvas as the cursor
+  CANVAS.style.cursor = 'none';
 
   // Utility
   function formatTime(sec) {
@@ -55,17 +109,37 @@
     return Math.hypot(dx, dy);
   }
 
+  // Keep the canvas internal drawing size consistent with the element size.
+  // This helps if the canvas is scaled via CSS (responsive).
+  function resizeCanvasToDisplaySize() {
+    const displayWidth  = CANVAS.clientWidth;
+    const displayHeight = CANVAS.clientHeight;
+    if (CANVAS.width !== displayWidth || CANVAS.height !== displayHeight) {
+      CANVAS.width = displayWidth;
+      CANVAS.height = displayHeight;
+      // Adjust john and mouse positions proportionally if desired.
+      john.x = Math.min(john.x, CANVAS.width - john.r);
+      john.y = Math.min(john.y, CANVAS.height - john.r);
+      mouse.x = Math.min(mouse.x, CANVAS.width);
+      mouse.y = Math.min(mouse.y, CANVAS.height);
+    }
+  }
+
   // Input
   CANVAS.addEventListener('mousemove', e => {
     const rect = CANVAS.getBoundingClientRect();
-    mouse.x = e.clientX - rect.left;
-    mouse.y = e.clientY - rect.top;
+    // Map mouse to canvas pixel coordinates
+    mouse.x = (e.clientX - rect.left) * (CANVAS.width / rect.width);
+    mouse.y = (e.clientY - rect.top)  * (CANVAS.height / rect.height);
   });
 
   CANVAS.addEventListener('click', e => {
     if (!running) return;
     const rect = CANVAS.getBoundingClientRect();
-    const click = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const click = {
+      x: (e.clientX - rect.left) * (CANVAS.width / rect.width),
+      y: (e.clientY - rect.top)  * (CANVAS.height / rect.height)
+    };
     if (!john.dead && distance(click, john) <= john.r * john.scale) {
       // caught!
       john.dead = true;
@@ -81,14 +155,18 @@
 
   // Random teleport (pops to a new place)
   function teleportJohn() {
-    const margin = 40;
-    john.x = Math.random() * (CANVAS.width - margin*2) + margin;
-    john.y = Math.random() * (CANVAS.height - margin*2) + margin;
+    const marginX = Math.max(60, Math.floor(CANVAS.width * 0.05));
+    const marginY = Math.max(60, Math.floor(CANVAS.height * 0.05));
+    john.x = Math.random() * (CANVAS.width - marginX*2) + marginX;
+    john.y = Math.random() * (CANVAS.height - marginY*2) + marginY;
   }
 
   // Start / restart
   function startGame() {
-    john = { x: CANVAS.width/2, y: CANVAS.height/2, r: 28, scale: 1, dead: false };
+    // ensure canvas is sized correctly before positioning
+    resizeCanvasToDisplaySize();
+
+    john = { x: CANVAS.width/2, y: CANVAS.height/2, r: Math.max(28, Math.floor(Math.min(CANVAS.width, CANVAS.height) * 0.03)), scale: 1, dead: false };
     timeLeft = TOTAL_SECONDS;
     startTime = performance.now();
     running = true;
@@ -96,6 +174,7 @@
     lastFrame = performance.now();
     teleportJohn();
     requestAnimationFrame(loop);
+    timerEl.textContent = formatTime(TOTAL_SECONDS);
   }
 
   restartBtn.addEventListener('click', () => {
@@ -104,6 +183,9 @@
 
   // Game loop
   function loop(now) {
+    // adjust canvas size if layout changed (responsive)
+    resizeCanvasToDisplaySize();
+
     const dtSeconds = (now - lastFrame) / 1000;
     lastFrame = now;
 
@@ -121,13 +203,14 @@
         vx = (john.x - mouse.x) / d;
         vy = (john.y - mouse.y) / d;
       }
-      // speed increases as time passes
+      // speed increases as time passes; scale speed with canvas size so feel is similar on larger screens
+      const baseSpeed = Math.max(60, Math.floor(Math.min(CANVAS.width, CANVAS.height) * 0.08));
       const aggression = Math.min(1, (TOTAL_SECONDS - timeLeft) / TOTAL_SECONDS);
-      const speed = 60 + aggression * 160; // pixels per second
+      const speed = baseSpeed + aggression * (baseSpeed * 1.8); // pixels per second
       john.x += vx * speed * dtSeconds;
       john.y += vy * speed * dtSeconds;
 
-      // clamp to canvas
+      // clamp to canvas (respecting image size)
       john.x = Math.max(john.r, Math.min(CANVAS.width - john.r, john.x));
       john.y = Math.max(john.r, Math.min(CANVAS.height - john.r, john.y));
 
@@ -147,81 +230,134 @@
     if (running && timeLeft <= 0 && !john.dead) {
       running = false;
       stateEl.textContent = 'You lose';
-      // show "dead" placeholder by making John small and adding a smiley elsewhere
       john.scale = 1;
     }
 
     // Draw
     draw();
 
-    // Continue loop if game still running or if we want to keep drawing final state
-    if (running || !running) {
-      requestAnimationFrame(loop);
-    }
+    // Continue loop
+    requestAnimationFrame(loop);
   }
 
   // Draw scene
   function draw() {
+    // Clear using CSS-sized canvas pixel dimensions
     ctx.clearRect(0,0,CANVAS.width,CANVAS.height);
 
-    // background grid for visual interest
+    // background
     ctx.fillStyle = '#222';
     ctx.fillRect(0,0,CANVAS.width,CANVAS.height);
 
-    // draw John (simple circle)
-    ctx.save();
-    ctx.translate(john.x, john.y);
-    ctx.scale(john.scale, john.scale);
+    // Draw John (image if loaded, otherwise fallback to circle)
+    if (johnImgLoaded) {
+      // compute draw size maintaining aspect ratio based on john.r and john.scale
+      const baseW = john.r * 2;
+      const drawW = baseW * john.scale;
+      const aspect = johnImg.width / johnImg.height || 1;
+      const drawH = drawW / aspect;
+      ctx.save();
+      ctx.translate(john.x - drawW/2, john.y - drawH/2);
+      ctx.drawImage(johnImg, 0, 0, drawW, drawH);
 
-    // body
-    ctx.beginPath();
-    ctx.fillStyle = john.dead ? '#999' : '#ffd86b';
-    ctx.arc(0,0, john.r, 0, Math.PI*2);
-    ctx.fill();
-
-    // eyes or X if dead
-    if (!john.dead) {
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.arc(-8, -6, 5, 0, Math.PI*2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(8, -6, 5, 0, Math.PI*2);
-      ctx.fill();
+      // If dead, draw red X overlay on top of the image
+      if (john.dead) {
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = Math.max(4, 4 * john.scale);
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.lineTo(drawW, drawH);
+        ctx.moveTo(drawW,0);
+        ctx.lineTo(0, drawH);
+        ctx.stroke();
+      }
+      ctx.restore();
     } else {
-      ctx.strokeStyle = '#ff0000';
-      ctx.lineWidth = 4;
+      // fallback circle (previous look)
+      ctx.save();
+      ctx.translate(john.x, john.y);
+      ctx.scale(john.scale, john.scale);
       ctx.beginPath();
-      ctx.moveTo(-16,-16); ctx.lineTo(0,0);
-      ctx.moveTo(0,-16); ctx.lineTo(-16,0);
-      ctx.moveTo(0,-16); ctx.lineTo(16,0);
-      ctx.moveTo(16,-16); ctx.lineTo(0,0);
-      ctx.stroke();
+      ctx.fillStyle = john.dead ? '#999' : '#ffd86b';
+      ctx.arc(0,0, john.r, 0, Math.PI*2);
+      ctx.fill();
+      if (!john.dead) {
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(-8, -6, 5, 0, Math.PI*2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(8, -6, 5, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-16,-16); ctx.lineTo(0,0);
+        ctx.moveTo(0,-16); ctx.lineTo(-16,0);
+        ctx.moveTo(0,-16); ctx.lineTo(16,0);
+        ctx.moveTo(16,-16); ctx.lineTo(0,0);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
-    ctx.restore();
-
-    // if lost: draw placeholder "tim cheese" text
+    // if lost: draw placeholder "tim cheese" text (you can replace with an image if you want)
     if (!running && timeLeft <= 0 && !john.dead) {
-      ctx.fillStyle = '#fff';
-      ctx.font = '36px sans-serif';
+      ctx.fillStyle = '#ff4d4d'; // red for lose
       ctx.textAlign = 'center';
-      ctx.fillText('Time is up — Tim Cheese is dead (replace with image)', CANVAS.width/2, CANVAS.height/2 + 30);
+      ctx.textBaseline = 'middle';
+      // Use Merriweather (loaded from Google Fonts) for the lose message
+      ctx.font = `${Math.max(20, Math.floor(CANVAS.width * 0.03))}px 'Merriweather', serif`;
+      ctx.fillText('YOU LOSE!', CANVAS.width/2, CANVAS.height/2 + 30);
     }
 
-    // If win: overlay message
+    // If win: overlay message using Bangers font
     if (!running && john.dead) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0,0,CANVAS.width, CANVAS.height);
-      ctx.fillStyle = '#7CFC00';
-      ctx.font = '56px sans-serif';
+
+      ctx.fillStyle = '#7CFC00'; // bright green
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Use Bangers (loaded from Google Fonts) for the win message
+      ctx.font = `${Math.max(28, Math.floor(CANVAS.width * 0.06))}px 'Bangers', cursive`;
       ctx.fillText('YOU WIN!', CANVAS.width/2, CANVAS.height/2);
+    }
+
+    // Draw gun cursor image at mouse position (if loaded). Centered on the mouse.
+    if (gunImgLoaded) {
+      const gunBaseW = Math.max(36, Math.floor(Math.min(CANVAS.width, CANVAS.height) * 0.04)); // scale with canvas
+      const gunAspect = gunImg.width / gunImg.height || 1;
+      const gunW = gunBaseW;
+      const gunH = gunBaseW / gunAspect;
+      // draw centered; if you want the barrel tip to align with the click hotspot, adjust offsets here
+      ctx.drawImage(gunImg, mouse.x - gunW/2, mouse.y - gunH/2, gunW, gunH);
+    } else {
+      // fallback: small crosshair
+      ctx.strokeStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(mouse.x - 6, mouse.y);
+      ctx.lineTo(mouse.x + 6, mouse.y);
+      ctx.moveTo(mouse.x, mouse.y - 6);
+      ctx.lineTo(mouse.x, mouse.y + 6);
+      ctx.stroke();
     }
   }
 
-  // Start the first game
-  startGame();
+  // Start the first game once page loads
+  window.addEventListener('load', () => {
+    // set initial timer text
+    timerEl.textContent = formatTime(TOTAL_SECONDS);
+    // start
+    startGame();
+  });
+
+  // Optional: handle window resize so canvas stays large and responsive
+  window.addEventListener('resize', () => {
+    // When resized, ensure HUD text updates and canvas display size is adjusted next frame
+    resizeCanvasToDisplaySize();
+  });
   </script>
 </body>
 </html>
