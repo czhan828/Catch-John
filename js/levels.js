@@ -1,7 +1,4 @@
-// Level definitions (progressive difficulty).
-// Increase baseSpeedMultiplier and teleport chances to make John faster and harder.
-// Edit or add entries to tune difficulty progression.
-
+/// Level definitions (progressive difficulty + secret boss at the end)
 window.LEVELS = [
   {
     id: 1,
@@ -43,9 +40,32 @@ window.LEVELS = [
     id: 5,
     name: "Level 5 — Insane",
     timeSeconds: 120,
-    baseSpeedMultiplier: 2.4,
+    baseSpeedMultiplier: 2.2,
     teleportChanceBase: 0.006,
     teleportChanceAggression: 0.05,
     lastPhasePercent: 0.25
+  },
+  {
+    id: 6,
+    name: "Level 6 — Final Test",
+    timeSeconds: 140,
+    baseSpeedMultiplier: 2.8,
+    teleportChanceBase: 0.008,
+    teleportChanceAggression: 0.07,
+    lastPhasePercent: 0.22
+  },
+  // Secret boss level — hidden until unlocked (secret: true)
+  {
+    id: 7,
+    name: "Secret — Boss: JOHN PORK",
+    timeSeconds: 180,
+    baseSpeedMultiplier: 3.5,
+    teleportChanceBase: 0.01,
+    teleportChanceAggression: 0.09,
+    lastPhasePercent: 0.18,
+    secret: true,
+    // Boss-specific fields:
+    health: 5,               // requires 5 hits to defeat
+    hurtFlashMs: 120         // quick visual feedback on hit
   }
 ];

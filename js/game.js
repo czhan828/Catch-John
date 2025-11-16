@@ -1,4 +1,4 @@
-// Core Game class (modified to incorporate stronger level-based difficulty and DM Serif font usage)
+// Core Game class (modified to support level health and emit completion events)
 (function(window){
   function Game(canvas, levels, ui) {
     this.canvas = canvas;
@@ -20,17 +20,14 @@
   }
 
   Game.prototype.resetState = function(){
-    this.john = { x: this.canvas.width/2, y: this.canvas.height/2, r: 36, scale: 1, dead: false };
+    this.john = { x: this.canvas.width/2, y: this.canvas.height/2, r: 36, scale: 1, dead: false, hp: 1 };
     this.mouse = { x: this.canvas.width/2, y: this.canvas.height/2 };
     this.startTime = 0;
     this.timeLeft = 0;
     this.running = false;
     this.lastFrame = 0;
     this._raf = null;
-  };
-
-  Game.prototype.setUI = function(ui){
-    this.ui = ui;
+    this._hurtUntil = 0; // for hit flash effect timestamps
   };
 
   Game.prototype.startLevel = function(index){
@@ -47,7 +44,8 @@
       y: this.canvas.height/2,
       r: Math.max(28, Math.floor(Math.min(this.canvas.width, this.canvas.height) * 0.035)),
       scale: 1,
-      dead: false
+      dead: false,
+      hp: Math.max(1, lvl.health || 1)
     };
     this.timeLeft = lvl.timeSeconds;
     this.startTime = performance.now();
@@ -115,7 +113,7 @@
       let vx = 0, vy = 0;
       if (d > 0.1) { vx = (this.john.x - this.mouse.x) / d; vy = (this.john.y - this.mouse.y) / d; }
 
-      // speed calculation: baseSpeed scaled by level multiplier and scaled by aggression
+      // speed calculation: baseSpeed scaled by level multiplier and aggression
       const baseSpeed = Math.max(60, Math.floor(Math.min(this.canvas.width, this.canvas.height) * 0.07));
       const lvlMult = (this._levelCfg.baseSpeedMultiplier || 1);
       const aggression = Math.min(1, (this._levelCfg.timeSeconds - this.timeLeft) / this._levelCfg.timeSeconds);
@@ -146,7 +144,8 @@
     if (this.running && this.timeLeft <= 0 && !this.john.dead) {
       this.running = false;
       if (this.ui && this.ui.stateEl) this.ui.stateEl.textContent = 'You lose';
-      // allow restart/next
+      // notify listeners that the level failed
+      window.dispatchEvent(new CustomEvent('levelFailed', { detail: { index: this.currentLevelIndex } }));
     }
 
     this.draw();
@@ -166,9 +165,28 @@
     this.john.y = Math.random() * (this.canvas.height - marginY*2) + marginY;
   };
 
+  // click handling with health support
   Game.prototype.onClick = function(clickX, clickY){
     if (!this.running) return;
+    // check collision - click coords must already be mapped to canvas pixels
     if (!this.john.dead && distance({x:clickX,y:clickY}, this.john) <= this.john.r * this.john.scale) {
+      // if boss has hp > 1, decrement hp first
+      this.john.hp = Math.max(0, (this.john.hp || 1) - 1);
+      // visual hurt feedback: set timestamp until which a flash is shown
+      const hurtMs = (this._levelCfg && this._levelCfg.hurtFlashMs) || 100;
+      this._hurtUntil = performance.now() + hurtMs;
+
+      if (this.john.hp > 0) {
+        // still alive: optionally give small knockback or audio (left for you to add)
+        // small random teleport as a reaction for boss hit (optional)
+        if (this._levelCfg && this._levelCfg.health > 1) {
+          // small bounce/teleport chance on hit
+          if (Math.random() < 0.35) this.randomTeleport();
+        }
+        return;
+      }
+
+      // hp == 0 -> defeated
       this.john.dead = true;
       this.running = false;
       if (this.ui && this.ui.stateEl) this.ui.stateEl.textContent = 'You win!';
@@ -178,6 +196,9 @@
         self.john.scale += 0.3;
         if (self.john.scale >= 6) clearInterval(enlarge);
       }, 40);
+
+      // dispatch levelComplete event
+      window.dispatchEvent(new CustomEvent('levelComplete', { detail: { index: this.currentLevelIndex } }));
     }
   };
 
@@ -191,6 +212,7 @@
     ctx.fillRect(0,0,CANVAS.width,CANVAS.height);
 
     // draw john (image or fallback)
+    let showHurtOverlay = (performance.now() < (this._hurtUntil || 0));
     if (this.johnLoaded) {
       const baseW = this.john.r * 2;
       const drawW = baseW * this.john.scale;
@@ -199,6 +221,10 @@
       ctx.save();
       ctx.translate(this.john.x - drawW/2, this.john.y - drawH/2);
       ctx.drawImage(this.johnImg, 0, 0, drawW, drawH);
+      if (showHurtOverlay) {
+        ctx.fillStyle = 'rgba(255,0,0,0.22)';
+        ctx.fillRect(0,0,drawW,drawH);
+      }
       if (this.john.dead) {
         ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = Math.max(4, 4 * this.john.scale);
@@ -206,6 +232,17 @@
         ctx.moveTo(0,0); ctx.lineTo(drawW, drawH);
         ctx.moveTo(drawW,0); ctx.lineTo(0, drawH);
         ctx.stroke();
+      } else if (this.john.hp > 1) {
+        // draw a subtle HP bar above the boss when it has multiple HP
+        const barW = Math.min(CANVAS.width * 0.25, drawW);
+        const barH = Math.max(6, Math.floor(barW * 0.07));
+        const x = this.john.x - barW/2;
+        const y = this.john.y - drawH/2 - 12;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(x, y, barW, barH);
+        const hpPct = Math.max(0, (this.john.hp / (this._levelCfg.health || 1)));
+        ctx.fillStyle = '#ff4444';
+        ctx.fillRect(x + 2, y + 2, Math.max(0, barW - 4) * hpPct, Math.max(0, barH - 4));
       }
       ctx.restore();
     } else {
@@ -219,7 +256,7 @@
       ctx.restore();
     }
 
-    // lose text (DM Serif Display)
+    // lose text
     if (!this.running && this.timeLeft <= 0 && !this.john.dead) {
       ctx.fillStyle = '#ff4d4d';
       ctx.textAlign = 'center';
@@ -228,7 +265,7 @@
       ctx.fillText('Time is up — Tim Cheese is dead (replace with image)', CANVAS.width/2, CANVAS.height/2 + 30);
     }
 
-    // win overlay (DM Serif Display)
+    // win overlay
     if (!this.running && this.john.dead) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0,0,CANVAS.width, CANVAS.height);
