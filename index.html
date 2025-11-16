@@ -15,10 +15,38 @@
     .level-list { margin:8px 0; padding-left:14px; color:#ddd; }
     button { margin-top:8px; font-family:'DM Serif Display', serif; }
     .small { font-size:13px; color:#bbb; }
+
+    /* Weapons UI */
+    #weapons {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .weapon {
+      width:56px;
+      height:56px;
+      border:2px solid transparent;
+      background:#111;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-sizing:border-box;
+      padding:4px;
+    }
+    .weapon img { max-width:100%; max-height:100%; display:block; pointer-events:none; }
+    .weapon.selected { border-color:#7CFC00; box-shadow:0 0 8px rgba(124,252,0,0.15); }
+
+    /* small responsive adjustments */
+    @media (max-width:1400px) {
+      canvas { width:1000px; height:650px; }
+    }
     @media (max-width:1100px) {
       #container { flex-direction:column; align-items:center; }
       #ui { width:100%; min-width:0; text-align:center; }
-      canvas { width: calc(100vw - 24px); height: calc(60vh); max-height:none; }
+      canvas { width: calc(100vw - 24px); height: calc(60vh); max-height: none; }
+      #weapons { justify-content:center; }
     }
   </style>
 </head>
@@ -37,11 +65,17 @@
       </div>
 
       <div class="controls">
-        <p class="small">Available Levels:</p>
+        <p class="small">Choose your weapon:</p>
+        <div id="weapons" aria-label="weapon selector"></div>
+      </div>
+
+      <div class="controls">
+        <p class="small">Available levels:</p>
         <ul id="levels" class="level-list"></ul>
       </div>
 
       <hr />
+      <p class="small">Tip: add or tune levels in js/levels.js. Assets must be in assets/ (GUN.png, THEJOHNPORK.png, llama.png, pickaxe.png, pinkgun.png, valGun.png).</p>
     </div>
   </div>
 

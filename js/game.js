@@ -1,15 +1,19 @@
-// Core Game class (modified to support level health and emit completion events)
+// Core Game class (modified to support dynamic weapon selection)
 (function(window){
   function Game(canvas, levels, ui) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.levels = levels || [];
     this.ui = ui || {}; // {timerEl, levelNameEl, stateEl}
-    this.gunImg = new Image();
-    this.gunImg.src = 'assets/GUN.png';
-    this.gunLoaded = false;
-    this.gunImg.onload = () => { this.gunLoaded = true; };
 
+    // weapon image (chosen by the player)
+    this.weaponImg = new Image();
+    this.weaponLoaded = false;
+    // default weapon (if you have a default file name, set it here)
+    this.weaponImg.src = 'assets/GUN.png';
+    this.weaponImg.onload = () => { this.weaponLoaded = true; };
+
+    // john image
     this.johnImg = new Image();
     this.johnImg.src = 'assets/THEJOHNPORK.png';
     this.johnLoaded = false;
@@ -28,6 +32,22 @@
     this.lastFrame = 0;
     this._raf = null;
     this._hurtUntil = 0; // for hit flash effect timestamps
+    this._selectedWeapon = 'GUN.png';
+  };
+
+  Game.prototype.setUI = function(ui){
+    this.ui = ui;
+  };
+
+  // Allow changing the weapon at runtime. filename is the image file located in assets/
+  Game.prototype.setWeapon = function(filename){
+    if (!filename) return;
+    this._selectedWeapon = filename;
+    this.weaponLoaded = false;
+    this.weaponImg = new Image();
+    this.weaponImg.src = 'assets/' + filename;
+    this.weaponImg.onload = () => { this.weaponLoaded = true; };
+    try { localStorage.setItem('cj_selected_weapon', filename); } catch(e) {}
   };
 
   Game.prototype.startLevel = function(index){
@@ -276,14 +296,15 @@
       ctx.fillText('YOU WIN!', CANVAS.width/2, CANVAS.height/2);
     }
 
-    // draw gun cursor
-    if (this.gunLoaded) {
+    // draw weapon cursor
+    if (this.weaponLoaded) {
       const gunBaseW = Math.max(36, Math.floor(Math.min(CANVAS.width, CANVAS.height) * 0.04));
-      const aspect = this.gunImg.width / this.gunImg.height || 1;
+      const aspect = this.weaponImg.width / this.weaponImg.height || 1;
       const gunW = gunBaseW;
       const gunH = gunBaseW / aspect;
-      ctx.drawImage(this.gunImg, this.mouse.x - gunW/2, this.mouse.y - gunH/2, gunW, gunH);
+      ctx.drawImage(this.weaponImg, this.mouse.x - gunW/2, this.mouse.y - gunH/2, gunW, gunH);
     } else {
+      // fallback: small crosshair
       ctx.strokeStyle = '#fff';
       ctx.beginPath();
       ctx.moveTo(this.mouse.x - 6, this.mouse.y);
