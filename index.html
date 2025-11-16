@@ -1,0 +1,227 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Catch John — Simple Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body { margin:0; height:100%; background:#111; color:#fff; font-family:sans-serif; }
+    #container { display:flex; align-items:flex-start; gap:16px; padding:12px; }
+    canvas { background:#222; border:1px solid #333; display:block; }
+    #ui { min-width:220px; }
+    button { margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="game" width="800" height="600"></canvas>
+    <div id="ui">
+      <h2>Catch John — Simple</h2>
+      <div><strong>Timer:</strong> <span id="timer">00:30</span></div>
+      <div><strong>State:</strong> <span id="state">Playing</span></div>
+      <p>Move your mouse to chase John. Click him to catch.</p>
+      <button id="restart">Restart</button>
+    </div>
+  </div>
+
+  <script>
+  // --- Simple Catch John (plain Canvas + JS) ---
+  // Config
+  const TOTAL_SECONDS = 30; // change to 120 for 2:00
+  const CANVAS = document.getElementById('game');
+  const ctx = CANVAS.getContext('2d');
+  const timerEl = document.getElementById('timer');
+  const stateEl = document.getElementById('state');
+  const restartBtn = document.getElementById('restart');
+
+  // Game state
+  let john = { x: CANVAS.width/2, y: CANVAS.height/2, r: 28, scale: 1, dead: false };
+  let mouse = { x: CANVAS.width/2, y: CANVAS.height/2 };
+  let startTime = null;
+  let timeLeft = TOTAL_SECONDS;
+  let running = false;
+  let lastFrame = 0;
+
+  // Utility
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = Math.floor(sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  function distance(a,b) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return Math.hypot(dx, dy);
+  }
+
+  // Input
+  CANVAS.addEventListener('mousemove', e => {
+    const rect = CANVAS.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  });
+
+  CANVAS.addEventListener('click', e => {
+    if (!running) return;
+    const rect = CANVAS.getBoundingClientRect();
+    const click = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (!john.dead && distance(click, john) <= john.r * john.scale) {
+      // caught!
+      john.dead = true;
+      running = false;
+      stateEl.textContent = 'You win!';
+      // simple enlarge effect
+      const enlarge = setInterval(() => {
+        john.scale += 0.3;
+        if (john.scale >= 6) clearInterval(enlarge);
+      }, 40);
+    }
+  });
+
+  // Random teleport (pops to a new place)
+  function teleportJohn() {
+    const margin = 40;
+    john.x = Math.random() * (CANVAS.width - margin*2) + margin;
+    john.y = Math.random() * (CANVAS.height - margin*2) + margin;
+  }
+
+  // Start / restart
+  function startGame() {
+    john = { x: CANVAS.width/2, y: CANVAS.height/2, r: 28, scale: 1, dead: false };
+    timeLeft = TOTAL_SECONDS;
+    startTime = performance.now();
+    running = true;
+    stateEl.textContent = 'Playing';
+    lastFrame = performance.now();
+    teleportJohn();
+    requestAnimationFrame(loop);
+  }
+
+  restartBtn.addEventListener('click', () => {
+    startGame();
+  });
+
+  // Game loop
+  function loop(now) {
+    const dtSeconds = (now - lastFrame) / 1000;
+    lastFrame = now;
+
+    if (running && !john.dead) {
+      // Update timer
+      const elapsed = (now - startTime) / 1000;
+      timeLeft = Math.max(0, TOTAL_SECONDS - elapsed);
+      timerEl.textContent = formatTime(Math.ceil(timeLeft));
+
+      // John's behavior: move away from mouse
+      const d = distance(john, mouse);
+      // direction away from mouse
+      let vx = 0, vy = 0;
+      if (d > 0.1) {
+        vx = (john.x - mouse.x) / d;
+        vy = (john.y - mouse.y) / d;
+      }
+      // speed increases as time passes
+      const aggression = Math.min(1, (TOTAL_SECONDS - timeLeft) / TOTAL_SECONDS);
+      const speed = 60 + aggression * 160; // pixels per second
+      john.x += vx * speed * dtSeconds;
+      john.y += vy * speed * dtSeconds;
+
+      // clamp to canvas
+      john.x = Math.max(john.r, Math.min(CANVAS.width - john.r, john.x));
+      john.y = Math.max(john.r, Math.min(CANVAS.height - john.r, john.y));
+
+      // occasional pop teleport as aggression increases
+      if (Math.random() < 0.002 + aggression * 0.02) {
+        teleportJohn();
+      }
+
+      // last 30% of time: make John bigger (easier to catch)
+      if (timeLeft <= TOTAL_SECONDS * 0.3) {
+        const t = 1 - (timeLeft / (TOTAL_SECONDS * 0.3)); // 0..1
+        john.scale = 1 + t * 3; // up to 4x
+      }
+    }
+
+    // Check time out
+    if (running && timeLeft <= 0 && !john.dead) {
+      running = false;
+      stateEl.textContent = 'You lose';
+      // show "dead" placeholder by making John small and adding a smiley elsewhere
+      john.scale = 1;
+    }
+
+    // Draw
+    draw();
+
+    // Continue loop if game still running or if we want to keep drawing final state
+    if (running || !running) {
+      requestAnimationFrame(loop);
+    }
+  }
+
+  // Draw scene
+  function draw() {
+    ctx.clearRect(0,0,CANVAS.width,CANVAS.height);
+
+    // background grid for visual interest
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0,0,CANVAS.width,CANVAS.height);
+
+    // draw John (simple circle)
+    ctx.save();
+    ctx.translate(john.x, john.y);
+    ctx.scale(john.scale, john.scale);
+
+    // body
+    ctx.beginPath();
+    ctx.fillStyle = john.dead ? '#999' : '#ffd86b';
+    ctx.arc(0,0, john.r, 0, Math.PI*2);
+    ctx.fill();
+
+    // eyes or X if dead
+    if (!john.dead) {
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(-8, -6, 5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(8, -6, 5, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-16,-16); ctx.lineTo(0,0);
+      ctx.moveTo(0,-16); ctx.lineTo(-16,0);
+      ctx.moveTo(0,-16); ctx.lineTo(16,0);
+      ctx.moveTo(16,-16); ctx.lineTo(0,0);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // if lost: draw placeholder "tim cheese" text
+    if (!running && timeLeft <= 0 && !john.dead) {
+      ctx.fillStyle = '#fff';
+      ctx.font = '36px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Time is up — Tim Cheese is dead (replace with image)', CANVAS.width/2, CANVAS.height/2 + 30);
+    }
+
+    // If win: overlay message
+    if (!running && john.dead) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0,0,CANVAS.width, CANVAS.height);
+      ctx.fillStyle = '#7CFC00';
+      ctx.font = '56px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('YOU WIN!', CANVAS.width/2, CANVAS.height/2);
+    }
+  }
+
+  // Start the first game
+  startGame();
+  </script>
+</body>
+</html>
