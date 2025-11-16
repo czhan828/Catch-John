@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Catch John — Saga</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- DM Serif Display for all text -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg: #040404;
+      --text-color: #f6f6f6;
+      /* base duration (seconds) used as multiplier per text length; JS will set --duration */
+      --duration: 36s;
+    }
+    html,body{ height:100%; margin:0; background:var(--bg); color:var(--text-color); font-family:'DM Serif Display', serif; overflow:hidden; }
+    .stage {
+      position:relative;
+      width:100%;
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      perspective:800px;
+      background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0.0) 100%);
+    }
+    /* top vignette to emphasize emerging from darkness */
+    .vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 75%, rgba(0,0,0,0.9) 100%);
+      mix-blend-mode: multiply;
+    }
+
+    .crawl-wrapper {
+      width: 70%;
+      max-width: 900px;
+      min-width: 260px;
+      height: 70vh;
+      overflow: hidden;
+      position: relative;
+      transform-origin: 50% 100%;
+      transform: rotateX(20deg) translateZ(-100px);
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      margin-bottom: 6vh;
+    }
+
+    .crawl {
+      width:100%;
+      color: var(--text-color);
+      font-size: clamp(18px, 2.6vw, 28px);
+      line-height: 1.6;
+      text-align: center;
+      white-space: pre-wrap;
+      opacity: 0;
+      transform: translateY(100%);
+      /* animation will move from bottom to top and fade in */
+      animation: crawl var(--duration) linear forwards;
+      /* small smooth fade-in at start */
+      will-change: transform, opacity;
+    }
+
+    @keyframes crawl {
+      0% {
+        transform: translateY(120%);
+        opacity: 0;
+        filter: blur(8px);
+      }
+      10% {
+        opacity: 1;
+        filter: blur(0);
+      }
+      100% {
+        transform: translateY(-120%);
+        opacity: 1;
+        filter: blur(0);
+      }
+    }
+
+    /* start button sits at very bottom, initially hidden */
+    .start-area {
+      position: absolute;
+      bottom: 28px;
+      left: 0;
+      right: 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events: none;
+    }
+
+    .start-btn {
+      pointer-events: auto;
+      background: linear-gradient(90deg, #d19a00, #ffdd57);
+      color:#111;
+      font-family:'DM Serif Display', serif;
+      border:0;
+      padding:12px 22px;
+      font-size:18px;
+      border-radius:6px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      opacity:0;
+      transform: translateY(10px) scale(.98);
+      transition: opacity 420ms ease, transform 420ms ease;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-block;
+    }
+    .start-btn.visible {
+      opacity:1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    /* small skip link top-right */
+    .skip {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-color);
+      padding:8px 12px;
+      border-radius:6px;
+      text-decoration:none;
+      font-size:14px;
+      border: 1px solid rgba(255,255,255,0.04);
+      transition: background 160ms;
+    }
+    .skip:hover { background: rgba(255,255,255,0.10); }
+
+    /* small responsive tweaks */
+    @media (max-width:900px){
+      .crawl-wrapper{ width:86%; height:62vh; }
+      .crawl{ font-size: clamp(16px, 3.6vw, 22px); }
+    }
+
+    @media (max-height:600px){
+      .crawl-wrapper{ height: 56vh; margin-bottom: 4vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage" role="region" aria-label="Story intro">
+    <a class="skip" id="skipLink" href="index.html">Skip intro</a>
+    <div class="crawl-wrapper" aria-hidden="false">
+      <div id="crawl" class="crawl" role="article" aria-live="polite">
+        <!-- Replace the text below with your John Pork saga. Keep line breaks where desired. -->
+        In the beginning there was hunger — not the need for food, but the craving for adventure.
+        John Pork came from a small tin-roofed town where nights were long and rumors were longer.
+        He learned to trade stories in alleys and to listen in the dim light of taverns,
+        learning every secret the town's cobblestones would spill.
+
+        He took to the road like a shadow following daybreak, with nothing but a battered satchel,
+        a half-broken compass, and a sharp stare that could cut through a lie.
+        Villagers would speak his name softly — sometimes with respect, sometimes in fear,
+        for wherever John Pork wandered, change was never far behind.
+
+        A whisper of rebellion gathered in the north, a crown corrupted, and a hero who refused to bow.
+        Monsters of law and ledger came down from high towers to stake their claims,
+        and John Pork answered, not with steel alone, but with the ridiculous righteousness of one who knows better.
+
+        These are the days that teach you how to fight for the last slice, how to bargain with ghosts,
+        and how to laugh when danger takes its hat off and steps forward politely.
+        This is the saga of John Pork — a fool, a friend, and sometimes a savior.
+        This is only the beginning.
+      </div>
+    </div>
+
+    <div class="start-area">
+      <a id="startBtn" class="start-btn" href="index.html" role="button">Start Game</a>
+    </div>
+
+    <div class="vignette" aria-hidden="true"></div>
+  </div>
+
+  <script>
+    (function(){
+      const crawlEl = document.getElementById('crawl');
+      const startBtn = document.getElementById('startBtn');
+      const skipLink = document.getElementById('skipLink');
+
+      // compute animation duration based on text height (so longer text scrolls slower)
+      // base: 18 seconds for ~600px of scrollable text, scale up linearly.
+      function setDurationFromContent(){
+        // measure the rendered height of the crawl content
+        // temporarily make it visible at natural position to measure (some browsers need computed style)
+        const wrapper = crawlEl.parentElement;
+        const wrapperH = wrapper.clientHeight || (window.innerHeight * 0.7);
+        // clone the node so we can measure full height without animation transform
+        const clone = crawlEl.cloneNode(true);
+        clone.style.position = 'absolute';
+        clone.style.transform = 'none';
+        clone.style.opacity = '1';
+        clone.style.animation = 'none';
+        clone.style.visibility = 'hidden';
+        document.body.appendChild(clone);
+        const contentH = clone.scrollHeight;
+        document.body.removeChild(clone);
+
+        // we want it to move from below visible area to above visible area:
+        // total travel = wrapper height + content height
+        const travel = wrapperH + contentH;
+
+        // speed: pixels per second. choose a slow comfortable speed, e.g., 20-40 px/s depending on content.
+        // compute speed so total duration is in a reasonable range (min 18s, max 90s).
+        const minDur = 18;
+        const maxDur = 90;
+        // base speed 26 px/s yields reasonable durations for moderate sizes
+        let speed = 26;
+        // adjust speed slightly based on content height to keep things readable
+        if (contentH > 2200) speed = 20;
+        if (contentH < 600) speed = 36;
+
+        let durationSeconds = Math.round(travel / speed);
+        durationSeconds = Math.max(minDur, Math.min(maxDur, durationSeconds));
+
+        document.documentElement.style.setProperty('--duration', durationSeconds + 's');
+      }
+
+      // Reveal start button when animation finishes
+      function onAnimationEnd(){
+        startBtn.classList.add('visible');
+        // ensure accessibility: announce interactive
+        startBtn.setAttribute('aria-hidden', 'false');
+      }
+
+      // If user clicks Skip, go to index immediately (link already points)
+      skipLink.addEventListener('click', function(){ /* regular navigation */ });
+
+      // If user clicks anywhere (or presses space/enter) while crawl is playing, skip to end
+      let skipped = false;
+      function skipToEnd(e){
+        if (skipped) return;
+        skipped = true;
+        // Stop animation, jump content to end position
+        crawlEl.style.animation = 'none';
+        crawlEl.style.transform = 'translateY(-120%)';
+        // reveal start button immediately
+        onAnimationEnd();
+      }
+      window.addEventListener('click', skipToEnd, { once: true });
+      window.addEventListener('keydown', (ev) => {
+        if (ev.key === ' ' || ev.key === 'Enter' || ev.key === 'Escape') {
+          skipToEnd();
+        }
+      });
+
+      // compute and set duration
+      setDurationFromContent();
+
+      // listen for the animationend event to reveal start button
+      crawlEl.addEventListener('animationend', onAnimationEnd);
+
+      // in case animationend doesn't fire (some browsers), set a fallback timer
+      const computedDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--duration')) || 36;
+      setTimeout(() => {
+        // if not already visible, reveal
+        if (!startBtn.classList.contains('visible')) onAnimationEnd();
+      }, (computedDuration * 1000) + 300); // small buffer
+
+      // optionally, when user clicks Start Game, let the browser navigate to your index.html
+      startBtn.addEventListener('click', (e) => {
+        // default is anchor navigation. we could do analytics here.
+      });
+    })();
+  </script>
+</body>
+</html>
