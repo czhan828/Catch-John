@@ -14,8 +14,7 @@
     { file: 'llama.png', label: 'Llama' },
     { file: 'pickaxe.png', label: 'Pickaxe' },
     { file: 'pinkgun.png', label: 'Pink Gun' },
-    { file: 'valGun.png', label: 'Val Gun' },
-    { file: 'GUN.png', label: 'Default Gun' } // include original default as option if present
+    { file: 'valGun.png', label: 'Val Gun' }
   ];
 
   // persistent keys

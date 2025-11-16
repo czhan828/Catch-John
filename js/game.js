@@ -10,12 +10,12 @@
     this.weaponImg = new Image();
     this.weaponLoaded = false;
     // default weapon (if you have a default file name, set it here)
-    this.weaponImg.src = 'assets/GUN.png';
+    this.weaponImg.src = 'assets/valGun.png';
     this.weaponImg.onload = () => { this.weaponLoaded = true; };
 
     // john image
     this.johnImg = new Image();
-    this.johnImg.src = 'assets/THEJOHNPORK.png';
+    this.johnImg.src = 'assets/john.png';
     this.johnLoaded = false;
     this.johnImg.onload = () => { this.johnLoaded = true; };
 
@@ -32,7 +32,7 @@
     this.lastFrame = 0;
     this._raf = null;
     this._hurtUntil = 0; // for hit flash effect timestamps
-    this._selectedWeapon = 'GUN.png';
+    this._selectedWeapon = 'valGun.png';
   };
 
   Game.prototype.setUI = function(ui){
