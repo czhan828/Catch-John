@@ -15,19 +15,17 @@
     { file: 'pickaxe.png', label: 'Pickaxe' },
     { file: 'pinkgun.png', label: 'Pink Gun' },
     { file: 'valGun.png', label: 'Val Gun' },
-    { file: 'GUN.png', label: 'Default Gun' } // include original default as option if present
   ];
 
   // persistent keys
   const SECRET_KEY = 'catch_john_secret_unlocked';
   const WEAPON_KEY = 'catch_john_selected_weapon';
 
-  // Read URL params (optional: ?from=intro, ?weapon=pickaxe.png)
+  
   const urlParams = new URLSearchParams(window.location.search);
-  const requestedWeapon = urlParams.get('weapon'); // e.g. 'pickaxe.png'
-  const fromQuery = urlParams.get('from'); // 'intro' if coming from story
+  const requestedWeapon = urlParams.get('weapon'); 
+  const fromQuery = urlParams.get('from'); 
 
-  // If story.html used localStorage to mark arrival, detect that too
   const CAME_FROM_INTRO_KEY = 'from_intro';
 
   function isSecretUnlocked(){
@@ -48,8 +46,7 @@
     });
   }
   preloadImages([
-    'assets/GUN.png',
-    'assets/THEJOHNPORK.png',
+    'assets/john.png',
     'assets/llama.png',
     'assets/pickaxe.png',
     'assets/pinkgun.png',
@@ -135,7 +132,7 @@
       const note = document.createElement('div');
       note.className = 'small';
       note.style.marginTop = '8px';
-      note.textContent = 'Secret boss unlocked!';
+      note.textContent = 'Secret Boss Unlocked!';
       levelsListEl.parentNode.appendChild(note);
     }
   }
@@ -167,7 +164,7 @@
       setSecretUnlocked();
       buildLevelList();
       setTimeout(() => {
-        alert('Secret unlocked! The boss level is available — ready to fight?');
+        alert('Secret unlocked! The Boss level is Available — Ready to Fight?');
         const secretIndex = (window.LEVELS || []).findIndex(l => l.secret);
         if (secretIndex >= 0) game.startLevel(secretIndex);
       }, 250);

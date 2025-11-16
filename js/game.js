@@ -1,4 +1,4 @@
-// Core Game class (modified to support dynamic weapon selection)
+// Core Game class (modified to support dynamic weapon selection + background image)
 (function(window){
   function Game(canvas, levels, ui) {
     this.canvas = canvas;
@@ -10,17 +10,32 @@
     this.weaponImg = new Image();
     this.weaponLoaded = false;
     // default weapon (if you have a default file name, set it here)
-    this.weaponImg.src = 'assets/GUN.png';
+    this.weaponImg.src = 'assets/pinkgun.png';
     this.weaponImg.onload = () => { this.weaponLoaded = true; };
 
     // john image
     this.johnImg = new Image();
-    this.johnImg.src = 'assets/THEJOHNPORK.png';
+    this.johnImg.src = 'assets/john.png';
     this.johnLoaded = false;
     this.johnImg.onload = () => { this.johnLoaded = true; };
 
+    // background image (cover-style)
+    this.bgImg = new Image();
+    // If your filename contains spaces, encodeURI will handle it (recommended to rename file to avoid spaces)
+    this.bgImg.src = encodeURI('assets/catch john bg.png');
+    this.bgLoaded = false;
+    this.bgImg.onload = () => { this.bgLoaded = true; };
+
     this.currentLevelIndex = 0;
     this.resetState();
+
+    // If user previously chose a weapon, load it now (key matches main.js & Game.setWeapon)
+    try {
+      const saved = localStorage.getItem('cj_selected_weapon');
+      if (saved) this.setWeapon(saved);
+    } catch (e) {
+      // ignore storage errors
+    }
   }
 
   Game.prototype.resetState = function(){
@@ -32,7 +47,7 @@
     this.lastFrame = 0;
     this._raf = null;
     this._hurtUntil = 0; // for hit flash effect timestamps
-    this._selectedWeapon = 'GUN.png';
+    this._selectedWeapon = 'pinkgun.png';
   };
 
   Game.prototype.setUI = function(ui){
@@ -227,9 +242,34 @@
     const CANVAS = this.canvas;
     ctx.clearRect(0,0,CANVAS.width,CANVAS.height);
 
-    // background
-    ctx.fillStyle = '#222';
-    ctx.fillRect(0,0,CANVAS.width,CANVAS.height);
+    // Draw background image (cover-style) if available, otherwise fallback color
+    if (this.bgLoaded) {
+      const imgW = this.bgImg.width || 1;
+      const imgH = this.bgImg.height || 1;
+      const canvasW = CANVAS.width;
+      const canvasH = CANVAS.height;
+      const imgRatio = imgW / imgH;
+      const canvasRatio = canvasW / canvasH;
+
+      let sx = 0, sy = 0, sWidth = imgW, sHeight = imgH;
+
+      if (imgRatio > canvasRatio) {
+        // image is wider than canvas -> crop left/right
+        sHeight = imgH;
+        sWidth = Math.round(imgH * canvasRatio);
+        sx = Math.round((imgW - sWidth) / 2);
+      } else {
+        // image is taller than canvas -> crop top/bottom
+        sWidth = imgW;
+        sHeight = Math.round(imgW / canvasRatio);
+        sy = Math.round((imgH - sHeight) / 2);
+      }
+
+      ctx.drawImage(this.bgImg, sx, sy, sWidth, sHeight, 0, 0, canvasW, canvasH);
+    } else {
+      ctx.fillStyle = '#222';
+      ctx.fillRect(0,0,CANVAS.width,CANVAS.height);
+    }
 
     // draw john (image or fallback)
     let showHurtOverlay = (performance.now() < (this._hurtUntil || 0));
