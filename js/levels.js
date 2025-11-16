@@ -4,7 +4,7 @@ window.LEVELS = [
     id: 1,
     name: "Level 1 — Easy",
     timeSeconds: 60,
-    baseSpeedMultiplier: 0.9,
+    baseSpeedMultiplier: 0.8,
     teleportChanceBase: 0.0015,
     teleportChanceAggression: 0.012,
     lastPhasePercent: 0.35
@@ -12,7 +12,7 @@ window.LEVELS = [
   {
     id: 2,
     name: "Level 2 — Normal",
-    timeSeconds: 75,
+    timeSeconds: 60,
     baseSpeedMultiplier: 1.1,
     teleportChanceBase: 0.0025,
     teleportChanceAggression: 0.018,
@@ -21,7 +21,7 @@ window.LEVELS = [
   {
     id: 3,
     name: "Level 3 — Hard",
-    timeSeconds: 90,
+    timeSeconds: 65,
     baseSpeedMultiplier: 1.4,
     teleportChanceBase: 0.0035,
     teleportChanceAggression: 0.025,
@@ -30,7 +30,7 @@ window.LEVELS = [
   {
     id: 4,
     name: "Level 4 — Very Hard",
-    timeSeconds: 105,
+    timeSeconds: 70,
     baseSpeedMultiplier: 1.8,
     teleportChanceBase: 0.0045,
     teleportChanceAggression: 0.035,
@@ -39,8 +39,8 @@ window.LEVELS = [
   {
     id: 5,
     name: "Level 5 — Insane",
-    timeSeconds: 120,
-    baseSpeedMultiplier: 2.2,
+    timeSeconds: 75,
+    baseSpeedMultiplier: 1.9, //OG 2.2
     teleportChanceBase: 0.006,
     teleportChanceAggression: 0.05,
     lastPhasePercent: 0.25
@@ -48,8 +48,8 @@ window.LEVELS = [
   {
     id: 6,
     name: "Level 6 — Final Test",
-    timeSeconds: 140,
-    baseSpeedMultiplier: 2.8,
+    timeSeconds: 80,
+    baseSpeedMultiplier: 2.0, //OG 2.8
     teleportChanceBase: 0.008,
     teleportChanceAggression: 0.07,
     lastPhasePercent: 0.22
@@ -58,8 +58,8 @@ window.LEVELS = [
   {
     id: 7,
     name: "Secret — Boss: JOHN PORK",
-    timeSeconds: 180,
-    baseSpeedMultiplier: 3.5,
+    timeSeconds: 100,
+    baseSpeedMultiplier: 2.3, //OG 3.5
     teleportChanceBase: 0.01,
     teleportChanceAggression: 0.09,
     lastPhasePercent: 0.18,
