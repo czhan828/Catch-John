@@ -316,14 +316,23 @@
       ctx.restore();
     }
 
-    // lose text
+    // lose image
     if (!this.running && this.timeLeft <= 0 && !this.john.dead) {
-      ctx.fillStyle = '#ff4d4d';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = `${Math.max(18, Math.floor(CANVAS.width * 0.03))}px 'DM Serif Display', serif`;
-      ctx.fillText('Time is up — Tim Cheese is dead (replace with image)', CANVAS.width/2, CANVAS.height/2 + 30);
+      const img = new Image();
+      img.src = 'assets/tim.png';
+
+      img.onload = () => {
+        const size = Math.min(CANVAS.width * 0.4, CANVAS.height * 0.4);
+        ctx.drawImage(
+          img,
+          CANVAS.width / 2 - size / 2,
+          CANVAS.height / 2 - size / 2,
+          size,
+          size
+        );
+      };
     }
+
 
     // win overlay
     if (!this.running && this.john.dead) {
