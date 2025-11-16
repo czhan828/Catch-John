@@ -41,7 +41,7 @@ window.LEVELS = [
     name: "Level 5 — Insane",
     timeSeconds: 75,
     baseSpeedMultiplier: 2.0, 
-    teleportChanceBase: 0.006,
+    teleportChanceBase: 0.0055,
     teleportChanceAggression: 0.05,
     lastPhasePercent: 0.25
   },
@@ -50,17 +50,16 @@ window.LEVELS = [
     name: "Level 6 — Final Test",
     timeSeconds: 80,
     baseSpeedMultiplier: 2.2, //OG 2.8
-    teleportChanceBase: 0.008,
+    teleportChanceBase: 0.0075,
     teleportChanceAggression: 0.07,
     lastPhasePercent: 0.22
   },
-  // Secret boss level — hidden until unlocked (secret: true)
   {
     id: 7,
     name: "Secret — Boss: JOHN PORK",
     timeSeconds: 100,
     baseSpeedMultiplier: 2.5,
-    teleportChanceBase: 0.01,
+    teleportChanceBase: 0.0095,
     teleportChanceAggression: 0.09,
     lastPhasePercent: 0.18,
     secret: true,
